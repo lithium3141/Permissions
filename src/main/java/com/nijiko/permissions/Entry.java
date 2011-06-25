@@ -122,7 +122,7 @@ public abstract class Entry {
                 cr = null;
             }
         }
-        
+
         if (cr == null) {
             // Check own permissions
             Set<String> perms = this.getPermissions();
@@ -160,7 +160,7 @@ public abstract class Entry {
     protected void cache(CheckResult cr) {
         if (cr == null)
             return;
-        if(cache.get(world) == null)
+        if (cache.get(world) == null)
             cache.put(world, new HashMap<String, CheckResult>());
         controller.cache.cacheResult(cr);
         this.cache.get(world).put(cr.getNode(), cr);

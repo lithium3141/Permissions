@@ -20,8 +20,12 @@ public class User extends Entry {
         }
         if (this.getRawParents().isEmpty()) {
             Group g = controller.getDefaultGroup(world);
-            if (g != null)
+            if (g != null) {
                 this.addParent(g);
+                Group qDef = controller.getGrp("?", g.name);
+                if(qDef != null)
+                    this.addParent(qDef);
+            }
         }
     }
 
@@ -34,6 +38,7 @@ public class User extends Entry {
     public String toString() {
         return "User " + name + " in " + world;
     }
+    //TODO: Edit promote/demote code to take advantage of ? entry changes
 
     public void demote(GroupWorld groupW, String track) {
         // Demote's code is slightly different from promote's as in promote, groupW can be null, so the user can be bumped up to the first entry in the track, but there's no equivalent for demotion.

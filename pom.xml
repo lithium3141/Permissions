@@ -33,6 +33,7 @@
                     <excludes>
                         <exclude>**/Harc*.java</exclude>
                         <exclude>**/harc/**/*.java</exclude>
+                        <exclude>**/*Map.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

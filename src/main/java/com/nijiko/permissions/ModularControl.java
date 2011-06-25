@@ -41,12 +41,12 @@ public class ModularControl extends PermissionHandler {
         }
     }
     
-    static {
-        if(RefreshTask.class.getClassLoader() != ModularControl.class.getClassLoader()) {
-            System.err.println("[Permissions] ClassLoader check failed.");
-            throw new RuntimeException("RefreshTask was loaded using a different classloader.");
-        }
-    }
+//    static {
+//        if(RefreshTask.class.getClassLoader() != ModularControl.class.getClassLoader()) {
+//            System.err.println("[Permissions] ClassLoader check failed.");
+//            throw new RuntimeException("RefreshTask was loaded using a different classloader.");
+//        }
+//    }
     
     public ModularControl(Configuration storageConfig) {
 //        System.out.println(this.getClass().getClassLoader());
@@ -400,6 +400,19 @@ public class ModularControl extends PermissionHandler {
                 for(Entry e : parents) {
                     if(e instanceof Group)
                         return e.getName();
+                    else if(e instanceof User) {
+                        User p = (User) e;
+                        if(p.getWorld().equals("*") && !u.getWorld().equals("*")) {
+                            LinkedHashSet<Entry> grandparents = p.getParents();
+                            if(grandparents != null && !grandparents.isEmpty()) {
+                                for(Entry pe : parents) {
+                                    if(pe instanceof Group)
+                                        return e.getName();
+                                }
+                            }
+                        }
+                        
+                    }
                 }
             }
         }
@@ -524,7 +537,7 @@ public class ModularControl extends PermissionHandler {
         if (this.worldGroups.get(world) == null)
             this.worldGroups.put(world, new HashMap<String, Group>());
         if (this.worldGroups.get(world).get(name.toLowerCase()) == null)
-            this.worldGroups.get(world).put(name.toLowerCase(), new Group(this, getGroupStorage(world), name, world, true));
+            this.worldGroups.get(world).put(name.toLowerCase(), new Group(this, getGroupStorage(world), name, world, !world.equals("?")));
         return this.worldGroups.get(world).get(name.toLowerCase());
     }
 
@@ -576,7 +589,7 @@ public class ModularControl extends PermissionHandler {
         return worldGroups.get(world).get(name.toLowerCase());
     }
 
-    private User getUsr(String world, String name) {
+    User getUsr(String world, String name) {
 //        world = getParentWorldUser(world);
         try {
             User u = safeGetUser(world, name);
@@ -590,7 +603,7 @@ public class ModularControl extends PermissionHandler {
 //        return worldUsers.get(world).get(name.toLowerCase());
     }
 
-    private Group getGrp(String world, String name) {
+    Group getGrp(String world, String name) {
 //        world = getParentWorldGroup(world);
         try {
             Group g = safeGetGroup(world, name);
