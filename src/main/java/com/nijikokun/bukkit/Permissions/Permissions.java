@@ -714,36 +714,38 @@ public class Permissions extends JavaPlugin {
                         return true;
                     }
 
-                    GroupWorld targetParent = null;
-
-                    boolean inOneGroup = false;
-                    Set<GroupWorld> parents = user.getRawParents();
-                    inOneGroup = !(parents.size() > 1);
-
-                    if (inOneGroup) {
-                        Iterator<GroupWorld> iter = parents.iterator();
-                        if (iter.hasNext()) {
-                            targetParent = iter.next();
-                        }
-                    } else {
-                        if (parentName == null) {
-                            if (args.length > currentArg) {
-                                parentName = args[currentArg];
-                                currentArg++;
-                            } else {
-                                msg.send("&4[Permissions] Unable to resolve parent group.");
-                                return true;
+                    Group parent = null;
+                    if (args.length > currentArg) {
+                        if(parentName == null) {
+                            parentName = args[currentArg];
+                            currentArg++;
+                            if(args.length > currentArg) {
+                                parentWorld = args[currentArg];
                             }
                         }
-                        if (args.length > currentArg) {
+                        else {
                             parentWorld = args[currentArg];
+                            currentArg++;
                         }
-                        targetParent = new GroupWorld(parentWorld, parentName);
+                        parent = getHandler().getGroupObject(parentWorld, parentName);
+                    } else {
+                        parent = user.getPrimaryGroup();
                     }
+
+                    if (parent == null) {
+                        msg.send("&4[Permissions] Specified parent group does not exist.");
+                        return true;
+                    }
+                    
+                    if(!user.getParents(null).contains(parent)) {
+                        msg.send("&4[Permissions] User is not a child of the specified parent group.");
+                        return true;
+                    }
+
                     if (isPromote)
-                        user.promote(targetParent, trackName);
+                        user.promote(parent, trackName);
                     else
-                        user.demote(targetParent, trackName);
+                        user.demote(parent, trackName);
 
                     msg.send("&4[Permissions] Syntax: /permissions <target> (w:<world>) [promote|demote] (t:<track>) (<parent>) (w:<parentworld>)");
                     return true;
