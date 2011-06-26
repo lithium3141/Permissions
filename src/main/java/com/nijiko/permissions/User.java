@@ -86,7 +86,7 @@ public class User extends Entry {
         GroupWorld groupW = g.toGroupWorld();
         for (ListIterator<GroupWorld> iter = trackGroups.listIterator(trackGroups.size()); iter.hasPrevious();) {
             GroupWorld gw = iter.previous();
-            System.out.println(gw);
+//            System.out.println(gw);
             if (gw.equals(groupW)) {
                 this.removeParent(g);
                 if (iter.hasPrevious()) {

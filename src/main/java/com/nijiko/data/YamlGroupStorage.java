@@ -275,8 +275,12 @@ public class YamlGroupStorage implements GroupStorage {
         } finally {
             rwl.readLock().unlock();
         }
-        if (rawTracks == null)
-            rawTracks = Arrays.asList((String) null);
+        if (groupConfig.getProperty("track") instanceof List) {
+            if(rawTracks == null)
+                rawTracks = Arrays.asList((String) null);
+            else
+                rawTracks.add(null);
+        }
         return new HashSet<String>(rawTracks);
     }
 
@@ -286,7 +290,7 @@ public class YamlGroupStorage implements GroupStorage {
         rwl.readLock().lock();
         try {
             if (trackName == null) {
-                rawGroups = groupConfig.getStringList("tracks", null);
+                rawGroups = groupConfig.getStringList("track", null);
 
             } else {
                 rawGroups = groupConfig.getStringList("tracks." + trackName, null);

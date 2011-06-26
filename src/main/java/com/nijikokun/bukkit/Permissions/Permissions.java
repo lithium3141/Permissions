@@ -340,6 +340,23 @@ public class Permissions extends JavaPlugin {
                         Collection<Group> groups = getHandler().getGroups(world);
                         msg.send(listEntries(groups, "Groups"));
                         return true;
+                    } else if (args[1].equalsIgnoreCase("tracks")) {
+                        if (player != null && !getHandler().has(player, "permissions.list.tracks")) {
+                            msg.send("&4[Permissions] You do not have permissions to use this command.");
+                            return true;
+                        }
+                        Set<String> tracks = getHandler().getTracks(world);
+                        StringBuilder b = new StringBuilder();
+                        b.append("&7[Permissions] &bTracks in world &c").append(world).append("&b: &c");
+                        for(String track : tracks ) {
+                            if(track == null)
+                                track = "<Default Track>";
+                            b.append(track).append(", ");
+                        }
+                        int len = b.length();
+                        b.delete(len - 2, len);
+                        msg.send(b.toString());
+                        return true;
                     }
                 }
             }
@@ -414,11 +431,17 @@ public class Permissions extends JavaPlugin {
                     if (closest != null) {
                         msg.send("&7[Permissions]&b Using closest match &4" + closest + "&b.");
                         name = closest;
-                        entry = isGroup ? getHandler().getGroupObject(world, name) : getHandler().getUserObject(world, name);
-                        if (entry == null) {
-                            msg.send("&4[Permissions] Closest user/group does not exist.");
+                        try {
+                            entry = isGroup ? getHandler().safeGetGroup(world, name) : getHandler().safeGetUser(world, name);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            msg.send("&4[Permissions] Error creating user/group.");
                             return true;
                         }
+//                        if (entry == null) {
+//                            msg.send("&4[Permissions] Closest user/group does not exist.");
+//                            return true;
+//                        }
                     } else {
                         return true;
                     }
