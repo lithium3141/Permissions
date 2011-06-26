@@ -385,6 +385,8 @@ public class ModularControl extends PermissionHandler {
         if (overrideWorld == null)
             overrideWorld = defaultWorld;
         LinkedHashSet<Group> groupSet = new LinkedHashSet<Group>();
+        if(raws == null)
+            return groupSet;
         for (GroupWorld raw : raws) {
             String rawWorld = raw.getWorld();
             if (rawWorld.equals("?") && overrideWorld != null) {

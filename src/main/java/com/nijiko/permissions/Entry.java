@@ -133,7 +133,10 @@ public abstract class Entry {
     }
 
     public LinkedHashSet<GroupWorld> getRawParents() {
-        return getStorage().getParents(name);
+        Storage store = getStorage();
+        if (store != null)
+        return store.getParents(name);
+        return null;
     }
 
     public void setPermission(final String permission, final boolean add) {
