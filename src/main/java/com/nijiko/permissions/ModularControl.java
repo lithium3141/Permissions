@@ -83,6 +83,7 @@ public class ModularControl extends PermissionHandler {
         GroupStorage groupStore = StorageFactory.getGroupStorage(world, storageConfig);
         PermissionWorld w = new PermissionWorld(world, this, userStore, groupStore);
         w.reload();
+        worlds.put(world, w);
     }
 
     @Override
