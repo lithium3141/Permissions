@@ -15,6 +15,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import com.nijiko.data.GroupWorld;
 import com.nijiko.data.Storage;
@@ -23,21 +25,29 @@ import com.nijiko.data.Storage;
 public abstract class Entry {
 
     protected ModularControl controller;
+    protected PermissionWorld worldObj;
     protected String name;
     protected String world;
     protected Map<String, Map<String, CheckResult>> cache = new HashMap<String, Map<String, CheckResult>>();
     protected Set<String> transientPerms = new HashSet<String>();
+    private final ConcurrentMap<String, Long> timedPerms = new ConcurrentHashMap<String, Long>();
 
-    Entry(ModularControl controller, String name, String world) {
+    Entry(ModularControl controller, String name, PermissionWorld worldObj) {
         this.controller = controller;
         this.name = name;
-        this.world = world;
+        this.world = worldObj.getWorldName();
+        this.worldObj = worldObj;
     }
 
     public boolean delete() {
         cache.clear();
         transientPerms.clear();
-        return getStorage().delete(name);
+        timedPerms.clear();
+        Storage store = getStorage();
+        if (store != null)
+            return store.delete(name);
+        else
+            return false;
     }
 
     public void addTransientPermission(String node) {
@@ -58,6 +68,54 @@ public abstract class Entry {
         transientPerms.clear();
     }
 
+    public Long addTimedPermission(String node, long duration) {
+        return timedPerms.put(node, duration);
+    }
+
+    public Long removeTimedPermission(String node) {
+        return timedPerms.remove(node);
+    }
+
+    public Long getDuration(String node) {
+        return timedPerms.get(node);
+    }
+
+    public void clearTimedPerms() {
+        timedPerms.clear();
+    }
+
+    void tick(long interval) {
+        if (interval <= 0)
+            return;
+        for (Iterator<Map.Entry<String, Long>> iter = timedPerms.entrySet().iterator(); iter.hasNext();) {
+            Map.Entry<String, Long> entry = iter.next();
+            Long left = entry.getValue();
+            if (left == null) {
+                iter.remove();
+                continue;
+            }
+            if (left < 0)
+                continue;
+            long newLeft = left - interval;
+            if (newLeft <= 0) {
+                iter.remove();
+                continue;
+            }
+            entry.setValue(newLeft);
+        }
+    }
+
+    // Used by PermissionWorld to copy timed perms to the new entry object
+    void copyTimedMap(Entry e) {
+        if (!this.equals(e))
+            return;
+        timedPerms.putAll(e.timedPerms);
+    }
+
+    protected Set<String> getTimedPermissions() {
+        return new HashSet<String>(timedPerms.keySet());
+    }
+
     public Map<String, Map<String, CheckResult>> getCache() {
         return Collections.unmodifiableMap(cache);
     }
@@ -65,8 +123,12 @@ public abstract class Entry {
     protected abstract Storage getStorage();
 
     public Set<String> getPermissions() {
-        Set<String> perms = new HashSet<String>(getStorage().getPermissions(name));
+        Set<String> perms = new HashSet<String>();
+        Storage store = getStorage();
+        if (store != null)
+            perms.addAll(store.getPermissions(name));
         resolvePerms(perms, transientPerms);
+        resolvePerms(perms, this.getTimedPermissions());
         return perms;
     }
 
@@ -83,22 +145,33 @@ public abstract class Entry {
 
     public void addPermission(final String permission) {
         controller.cache.updatePerms(this, permission);
-        getStorage().addPermission(name, permission);
+        Storage store = getStorage();
+        if (store != null)
+            store.addPermission(name, permission);
     }
 
     public void removePermission(final String permission) {
         controller.cache.updatePerms(this, permission);
-        getStorage().removePermission(name, permission);
+
+        Storage store = getStorage();
+        if (store != null)
+            store.removePermission(name, permission);
     }
 
     public void addParent(Group group) {
         controller.cache.updateParent(this, group);
-        getStorage().addParent(name, group.world, group.name);
+
+        Storage store = getStorage();
+        if (store != null)
+            store.addParent(name, group.world, group.name);
     }
 
     public void removeParent(Group group) {
         controller.cache.updateParent(this, group);
-        getStorage().removeParent(name, group.world, group.name);
+
+        Storage store = getStorage();
+        if (store != null)
+            store.removeParent(name, group.world, group.name);
     }
 
     public boolean hasPermission(String permission) {
@@ -408,27 +481,47 @@ public abstract class Entry {
     }
 
     public void setData(String path, Object data) {
-        getStorage().setData(name, path, data);
+        Storage store = getStorage();
+        if (store != null)
+            store.setData(name, path, data);
     }
 
     public String getRawString(String path) {
-        return getStorage().getString(name, path);
+        Storage store = getStorage();
+        if (store != null)
+            return store.getString(name, path);
+        else
+            return null;
     }
 
     public Integer getRawInt(String path) {
-        return getStorage().getInt(name, path);
+        Storage store = getStorage();
+        if (store != null)
+            return store.getInt(name, path);
+        else
+            return null;
     }
 
     public Boolean getRawBool(String path) {
-        return getStorage().getBool(name, path);
+        Storage store = getStorage();
+        if (store != null)
+            return store.getBool(name, path);
+        else
+            return null;
     }
 
     public Double getRawDouble(String path) {
-        return getStorage().getDouble(name, path);
+        Storage store = getStorage();
+        if (store != null)
+            return store.getDouble(name, path);
+        else
+            return null;
     }
 
     public void removeData(String path) {
-        getStorage().removeData(name, path);
+        Storage store = getStorage();
+        if (store != null)
+            store.removeData(name, path);
     }
 
     public static final class BooleanInfoVisitor implements EntryVisitor<Boolean> {

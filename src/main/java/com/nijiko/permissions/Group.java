@@ -10,8 +10,8 @@ public class Group extends Entry {
 
     private GroupStorage data;
 
-    Group(ModularControl controller, GroupStorage data, String name, String world, boolean create) {
-        super(controller, name, world);
+    Group(ModularControl controller, GroupStorage data, String name, PermissionWorld worldObj, boolean create) {
+        super(controller, name, worldObj);
         this.data = data;
         if (create && !world.equals("?")) {
             System.out.println("Creating group " + name);
@@ -20,6 +20,8 @@ public class Group extends Entry {
     }
 
     public boolean isDefault() {
+        if(data == null)
+            return false;
         return data.isDefault(name);
     }
 
@@ -34,6 +36,8 @@ public class Group extends Entry {
     }
 
     public Set<String> getTracks() {
+        if(data == null)
+            return null;
         return data.getTracks();
     }
 
@@ -44,7 +48,7 @@ public class Group extends Entry {
     
     @Override
     public boolean delete() {
-        controller.delGrp(world, name);
+        worldObj.delGrp(name);
         return super.delete();
     }
     
