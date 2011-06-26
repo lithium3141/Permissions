@@ -27,7 +27,7 @@ public class PermissionWorld {
     }
 
     public boolean reload() {
-        if (userStore == null || groupStore == null || world.equals("?"))// Yes, only a minimum of one is needed.
+        if (world.equals("?") || userStore == null || groupStore == null || world.equals("?"))// Yes, only a minimum of one is needed.
             return false;
 
         if (userStore != null)

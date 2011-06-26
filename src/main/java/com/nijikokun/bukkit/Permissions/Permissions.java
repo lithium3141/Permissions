@@ -174,11 +174,12 @@ public class Permissions extends JavaPlugin {
     }
 
     public void setupPermissions(Configuration storageConfig) {
+//        System.out.println("Setting up Permissions...");
         try {
             Security = new ModularControl(storageConfig);
             getHandler().setDefaultWorld(defaultWorld);
             getHandler().load();
-            // System.out.println(getServer().getWorlds());
+//            System.out.println(getServer().getWorlds());
             for (World w : getServer().getWorlds()) {
                 getHandler().loadWorld(w.getName());
             }
@@ -304,7 +305,7 @@ public class Permissions extends JavaPlugin {
                     } else {
                         text.append("&a[Permissions] Loaded worlds: &b");
                         for (String world : worlds) {
-                            text.append(world).append(" ,");
+                            text.append(world).append(", ");
                         }
                         text.delete(text.length() - 2, text.length());
                     }

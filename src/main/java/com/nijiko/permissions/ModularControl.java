@@ -62,7 +62,7 @@ public class ModularControl extends PermissionHandler {
     @Override
     public boolean reload(String world) {
         cache.reloadWorld(world);
-        PermissionWorld w = worlds.get(world);
+        PermissionWorld w = this.getWorldObject(world);
         if (w == null)
             return false;
         return w.reload();
@@ -70,7 +70,7 @@ public class ModularControl extends PermissionHandler {
 
     @Override
     public boolean loadWorld(String world) throws Exception {
-        if (checkWorld(world)) {
+        if (!checkWorld(world)) {
             forceLoadWorld(world);
             return true;
         }
@@ -79,11 +79,14 @@ public class ModularControl extends PermissionHandler {
 
     @Override
     public void forceLoadWorld(String world) throws Exception {
-        UserStorage userStore = StorageFactory.getUserStorage(world, storageConfig);
-        GroupStorage groupStore = StorageFactory.getGroupStorage(world, storageConfig);
+        boolean q = world.equals("?");
+        UserStorage userStore = q ? null : StorageFactory.getUserStorage(world, storageConfig);
+        GroupStorage groupStore = q ? null :  StorageFactory.getGroupStorage(world, storageConfig);
         PermissionWorld w = new PermissionWorld(world, this, userStore, groupStore);
         w.reload();
+//        System.out.println("Loaded world " + world);
         worlds.put(world, w);
+//        System.out.println(worlds);
     }
 
     @Override
@@ -97,6 +100,7 @@ public class ModularControl extends PermissionHandler {
     @Override
     public void load() throws Exception {
         this.loadWorld("*"); // Global permissions
+        this.loadWorld("?");
         this.loadWorld(defaultWorld);
     }
 
