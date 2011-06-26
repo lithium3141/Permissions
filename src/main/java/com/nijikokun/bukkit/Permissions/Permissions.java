@@ -699,7 +699,7 @@ public class Permissions extends JavaPlugin {
                     if (args.length > currentArg) {
                         String temp = args[currentArg];
                         if (temp.startsWith("t:"))
-                            trackName = temp;
+                            trackName = temp.substring(2);
                         else
                             parentName = temp;
                         currentArg++;
@@ -743,17 +743,21 @@ public class Permissions extends JavaPlugin {
                         return true;
                     }
 
+                    boolean result = false;
                     if (isPromote)
-                        user.promote(parent, trackName);
+                        result = user.promote(parent, trackName);
                     else
-                        user.demote(parent, trackName);
-
-                    msg.send("&4[Permissions] Syntax: /permissions <target> (w:<world>) [promote|demote] (t:<track>) (<parent>) (w:<parentworld>)");
+                        result = user.demote(parent, trackName);
+                    
+                    if(result)
+                        msg.send("&7[Permissions] Promotion/demotion successful.");
+                    else
+                        msg.send("&7[Permissions] Promotion/demotion failed.");                        
+                        
                     return true;
                 }
 
-                msg.send("&7[Permissions] Syntax: ");
-                msg.send("&b/permissions &a<target> (w:<world>) [promote|demote] ...");
+                msg.send("&7[Permissions] Syntax: /permissions <target> (w:<world>) [promote|demote] (t:<track>) (<parent>) (w:<parentworld>)");
             }
 
             msg.send("&b/permissions &a(g:)<target> (w:<world>) [perms|parents] [list|add|remove] ...");

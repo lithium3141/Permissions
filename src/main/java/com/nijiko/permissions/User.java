@@ -70,45 +70,45 @@ public class User extends Entry {
         return null;
     }
 
-    // TODO: Edit promote/demote code to take advantage of ? entry changes
-
-    public void demote(Group g, String track) {
+    public boolean demote(Group g, String track) {
         // Demote's code is slightly different from promote's as in promote, groupW can be null, so the user can be bumped up to the first entry in the track, but there's no equivalent for demotion.
         if (g == null)
-            return;
+            return false;
         if (!this.getParents(null).contains(g))
-            return;
+            return false;
 
         GroupStorage gStore = worldObj.getGroupStorage();
         if (gStore == null)
-            return;
+            return false;
         LinkedList<GroupWorld> trackGroups = gStore.getTrack(track);
         if (trackGroups == null)
-            return;
+            return false;
         GroupWorld groupW = g.toGroupWorld();
-        for (ListIterator<GroupWorld> iter = trackGroups.listIterator(trackGroups.size() - 1); iter.hasPrevious();) {
+        for (ListIterator<GroupWorld> iter = trackGroups.listIterator(trackGroups.size()); iter.hasPrevious();) {
             GroupWorld gw = iter.previous();
+            System.out.println(gw);
             if (gw.equals(groupW)) {
                 this.removeParent(g);
                 if (iter.hasPrevious()) {
                     GroupWorld prev = iter.previous();
                     this.addParent(controller.getGrp(prev.getWorld(), prev.getName()));
                 }
-                break;
+                return true;
             }
         }
+        return false;
     }
 
-    public void promote(Group g, String track) {
+    public boolean promote(Group g, String track) {
         if (!this.getParents(null).contains(g))
-            return;
+            return false;
 
         GroupStorage gStore = worldObj.getGroupStorage();
         if (gStore == null)
-            return;
+            return false;
         LinkedList<GroupWorld> trackGroups = gStore.getTrack(track);
         if (trackGroups == null)
-            return;
+            return false;
         if (g == null) {
             ListIterator<GroupWorld> iter = trackGroups.listIterator();
             if (iter.hasNext()) {
@@ -116,7 +116,7 @@ public class User extends Entry {
                 if (gw != null)
                     this.addParent(controller.getGrp(gw.getWorld(), gw.getName()));
             }
-            return;
+            return false;
         }
 
         GroupWorld groupW = g.toGroupWorld();
@@ -127,10 +127,11 @@ public class User extends Entry {
                     GroupWorld next = iter.next();
                     this.removeParent(g);
                     this.addParent(controller.getGrp(next.getWorld(), next.getName()));
-                    return;
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     @Override

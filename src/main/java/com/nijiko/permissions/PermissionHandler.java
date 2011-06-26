@@ -184,10 +184,20 @@ public abstract class PermissionHandler {
     public abstract String getUserSuffix(String world, String user);
     /**
      * Gets the primary group of the user.
-     * Returns an null if user has no parent groups.
+     * Returns the default group if user has no parent groups,
+     * or null if there is no default group for that world.
      * @param world Player's world
      * @param user Player's name
      * @return Player's primary group
+     */
+    public abstract Group getPrimaryGroupObject(String world, String user);
+    /**
+     * Gets name of the primary group of the user.
+     * Returns the name of the default group if user has no parent groups,
+     * or "Default" if there is no default group for that world.
+     * @param world Player's world
+     * @param user Player's name
+     * @return Name of player's primary group
      */
     public abstract String getPrimaryGroup(String world, String user);
     /**

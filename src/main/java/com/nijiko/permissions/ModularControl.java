@@ -334,6 +334,7 @@ public class ModularControl extends PermissionHandler {
             return g.getName();
     }
 
+    @Override
     public Group getPrimaryGroupObject(String world, String user) {
         User u = getUsr(world, user);
         if (u == null) {

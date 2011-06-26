@@ -34,6 +34,7 @@
                         <exclude>**/Harc*.java</exclude>
                         <exclude>**/harc/**/*.java</exclude>
                         <exclude>**/*Map.java</exclude>
+                        <exclude>**/ParallelChecker.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
