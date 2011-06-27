@@ -164,7 +164,7 @@ public class YamlUserStorage implements UserStorage {
         name = name.replace('.', ','); // Fix for legacy usernames with periods
         rwl.writeLock().lock();
         try {
-            Set<String> parents = new HashSet<String>(userConfig.getStringList("users." + name + ".groups", null));
+            Set<String> parents = new LinkedHashSet<String>(userConfig.getStringList("users." + name + ".groups", null));
             if (groupWorld == null || this.world.equalsIgnoreCase(groupWorld))
                 parents.add(groupName);
             else
@@ -183,7 +183,7 @@ public class YamlUserStorage implements UserStorage {
         name = name.replace('.', ','); // Fix for legacy usernames with periods
         rwl.writeLock().lock();
         try {
-            Set<String> parents = new HashSet<String>(userConfig.getStringList("users." + name + ".groups", null));
+            Set<String> parents = new LinkedHashSet<String>(userConfig.getStringList("users." + name + ".groups", null));
             if (groupWorld == null || this.world.equalsIgnoreCase(groupWorld))
                 parents.remove(groupName);
             else

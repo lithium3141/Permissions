@@ -35,18 +35,18 @@ public class User extends Entry {
     }
 
     private boolean addDefault() {
-        if (this.getRawParents().isEmpty())
-            return false;
-        User u = this.controller.getUserObject("*", name);
-        if (u == null)
-            return false;
-
-        LinkedHashSet<GroupWorld> gwSet = u.getRawParents();
-        for (GroupWorld gw : gwSet) {
-            if (gw.getWorld().equals("?"))
-                return false;
+        if (this.getRawParents().isEmpty()) {
+            User u = this.controller.getUserObject("*", name);
+            if (u != null) {
+                LinkedHashSet<GroupWorld> gwSet = u.getRawParents();
+                for (GroupWorld gw : gwSet) {
+                    if (gw.getWorld().equals("?"))
+                        return false;
+                }   
+            }
+            return true;
         }
-        return true;
+        return false;
     }
 
     @Override

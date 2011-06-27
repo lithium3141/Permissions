@@ -100,7 +100,7 @@ public class YamlGroupStorage implements GroupStorage {
     public void addParent(String name, String groupWorld, String groupName) {
         rwl.writeLock().lock();
         try {
-            Set<String> parents = new HashSet<String>(groupConfig.getStringList("groups." + name + ".inheritance", null));
+            Set<String> parents = new LinkedHashSet<String>(groupConfig.getStringList("groups." + name + ".inheritance", null));
             if (groupWorld == null || this.world.equalsIgnoreCase(groupWorld))
                 parents.add(groupName);
             else
@@ -117,7 +117,7 @@ public class YamlGroupStorage implements GroupStorage {
     public void removeParent(String name, String groupWorld, String groupName) {
         rwl.writeLock().lock();
         try {
-            Set<String> parents = new HashSet<String>(groupConfig.getStringList("groups." + name + ".inheritance", null));
+            Set<String> parents = new LinkedHashSet<String>(groupConfig.getStringList("groups." + name + ".inheritance", null));
             if (groupWorld == null || this.world.equalsIgnoreCase(groupWorld))
                 parents.remove(groupName);
             else

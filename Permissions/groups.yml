@@ -1,34 +1,45 @@
-##        
-# AntiBuild is included with this.  To disable a group from being able to build then
-# set the build: flag to false (build: false).  If you want a group to be able to build
-# then set it to true. 
+##  
+# Permissions has AntiBuild, which prevents a player from destroying/placing blocks.
+# To prevent a group of players then set the build: flag to false (build: false).
+# If you want a group to be able to build then set it to true. 
 ##
-# Groups can contain inheritance.
-#   To make a group inherit the permissions from another
-#   group simply place the groups name in the "inheritance:" like so:
+# Groups can inherit from other groups.
+#   To make a group inherit the permissions and info nodes from another
+#   group, simply place the groups name in the "inheritance:" like so:
 #
 #   Example:
 #       inheritance:
 #           - Default
 ##
-#   Globalized Permission settings:
+#   Wildcard Permission settings:
 #
-#       If a permission contains periods (.) you can denote a globalized parameter:
-#
-#           - 'foo.*'
-#
-#       This will allow you to use all general commands.
+#       You can have wildcard nodes which encompass all nodes that match it.
+#       For example, the node "modplugin.*" matches "modplugin.kick", "modplugin.ban",
+#       "modplugin.settings.view", and so on.
 #
 ##
-#   Single Asterisk denotes all commands:
-#
+#   A single asterisk means that this user/group has all permissions.
 #       - '*'
 ##
-#   To exempt a node use the - prefix like so:
+#   Negated nodes are created by prefixing a normal node with "-".
+#   They prevent less specific wildcard nodes from matching the negated node.
+#   For example:
+#   
+#   permissions:
+#       - 'foo.*'
 #       - '-foo.bar'
+#
+#   In this case, the user/group will have "foo.foo", "foo.foobar", and so on, but not "foo.bar".
+#
 ##
 #   prefix: and suffix: do not do anything on their own.  You need another outside plugin
 #   such as iChat or HeroChat in order for these to do anything.
+##
+#
+#   For more info, visit https://github.com/TheYeti/Permissions/wiki/Guide-to-creating-YAML-configs
+#
+##
+
 groups:
     Default:
         default: true
@@ -37,9 +48,7 @@ groups:
             suffix: ''
             build: false
         inheritance:
-        permissions:
-            - 'foo.bar'
-    Moderator:
+    Member:
         default: false
         info:
             prefix: ''
@@ -48,7 +57,20 @@ groups:
         inheritance:
             - Default
         permissions:
-            - 'bar.foo'
+            - 'warpplugin.warp'
+            - 'econplugin.basic.*'
+    Moderator:
+        default: false
+        info:
+            prefix: ''
+            suffix: ''
+            build: true
+        inheritance:
+            - Member
+        permissions:
+            - 'modplugin.ban'
+            - 'modplugin.kick'
+            - 'modplugin.unban'
     Admins:
         default: false
         info:

@@ -1,26 +1,41 @@
 ##
-# Users denote which users are included in which group.
-# TheNo1Yeti is in the Admin group
-# Herpina is a member of the Moderator group but also has access
-# to the herp.derp permissions
-# Derpina is a member of the admin group but does not have access
-# to the derp.derp permission node
-# Users can have a prefix and suffix of their own.
+#
+# User entries are similar in syntax to groups, except that the groups they inherit from are denoted by
+# "groups:", instead of "inheritance:".
+#
 ##
+#
+# Users can have their own permissions, shown by FriendB,
+# and also can have a prefix and suffix of their own, as shown by FriendA. 
+#
+##
+#
+# For more info, visit https://github.com/TheYeti/Permissions/wiki/Guide-to-creating-YAML-configs
+#
+##
+
 users:
-    TheNo1Yeti:
+    TheServerOwner:
         groups:
             - Admins
         permissions:
-    Herpina:
+    FriendA:
+        info:
+            prefix: '&4[~Alice~]&f'
         groups: 
             - Moderator
         permissions:
-            - 'herp.derp'
-    Derpina:
+    FriendB:
         groups: 
-            - Admins
-        info:
-            prefix: '&4'            
+            - Moderator
         permissions:
-            - '-derp.derp'
+            - 'warpplugin.manage.*'
+    NewGuy:
+        groups: 
+            - Guest
+    Herpina:
+        groups:
+            - Member
+    Derpina:
+        groups:
+            - Member
