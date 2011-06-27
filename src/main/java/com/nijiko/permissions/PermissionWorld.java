@@ -171,4 +171,9 @@ public class PermissionWorld {
     public String getWorldName() {
         return world;
     }
+    
+    void tick(long interval) {
+        for(User u : users.values())
+            u.tick(interval);
+    }
 }

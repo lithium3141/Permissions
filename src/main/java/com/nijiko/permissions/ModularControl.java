@@ -14,6 +14,8 @@ import org.bukkit.util.config.Configuration;
 
 import com.nijiko.data.GroupStorage;
 import com.nijiko.data.GroupWorld;
+import com.nijiko.data.NullGroupStorage;
+import com.nijiko.data.NullUserStorage;
 import com.nijiko.data.StorageFactory;
 import com.nijiko.data.UserStorage;
 import com.nijikokun.bukkit.Permissions.Permissions;
@@ -28,13 +30,22 @@ public class ModularControl extends PermissionHandler {
     private Configuration storageConfig;
     private String defaultWorld = "";
 
-    private Map<String, PermissionWorld> worlds = new HashMap<String, PermissionWorld>(1, 1.5f); //
+    private Map<String, PermissionWorld> worlds = new HashMap<String, PermissionWorld>(1, 1.5f);
+    
+    public static final long tickInterval = 10L;
     PermissionCache cache = new PermissionCache();
 
     class RefreshTask implements Runnable {
         @Override
         public void run() {
             storageReload();
+        }
+    }
+
+    class TickTask implements Runnable {
+        @Override
+        public void run() {
+            tick();
         }
     }
 
@@ -51,6 +62,7 @@ public class ModularControl extends PermissionHandler {
         loadWorldInheritance();
         int period = storageConfig.getInt("permissions.storage.reload", 6000);
         Permissions.instance.getServer().getScheduler().scheduleAsyncRepeatingTask(Permissions.instance, this.new RefreshTask(), period, period);
+        Permissions.instance.getServer().getScheduler().scheduleAsyncRepeatingTask(Permissions.instance, this.new TickTask(), tickInterval, tickInterval);
     }
 
     // World manipulation methods
@@ -80,8 +92,8 @@ public class ModularControl extends PermissionHandler {
     @Override
     public void forceLoadWorld(String world) throws Exception {
         boolean q = world.equals("?");
-        UserStorage userStore = q ? null : StorageFactory.getUserStorage(world, storageConfig);
-        GroupStorage groupStore = q ? null :  StorageFactory.getGroupStorage(world, storageConfig);
+        UserStorage userStore = q ? new NullUserStorage(world) : StorageFactory.getUserStorage(world, storageConfig);
+        GroupStorage groupStore = q ? new NullGroupStorage(world) :  StorageFactory.getGroupStorage(world, storageConfig);
         PermissionWorld w = new PermissionWorld(world, this, userStore, groupStore);
         w.reload();
 //        System.out.println("Loaded world " + world);
@@ -110,14 +122,6 @@ public class ModularControl extends PermissionHandler {
         for (PermissionWorld w : worlds.values())
             w.minorReload();
 
-        // TODO: Move transient/timed reload code into PermissionWorld
-        // for (Map<String, User> users : worldUsers.values())
-        // for (User u : users.values())
-        // u.clearTransientPerms();
-        // for (Map<String, Group> groups : worldGroups.values())
-        // for (Group g : groups.values())
-        // g.clearTransientPerms();
-
         Permissions.instance.getServer().getPluginManager().callEvent(new StorageReloadEvent());
     }
 
@@ -126,6 +130,13 @@ public class ModularControl extends PermissionHandler {
         storageReload();
         for (PermissionWorld w : worlds.values()) {
             w.reload();
+        }
+    }
+    
+    private void tick() {
+//        System.out.println("[Permissions] Ticking");
+        for(PermissionWorld w: worlds.values()) {
+            w.tick(tickInterval);
         }
     }
 
