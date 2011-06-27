@@ -26,46 +26,59 @@ public class YamlUserStorage implements UserStorage {
         this.userConfig = userConfig;
         this.world = world;
         this.rwl = new ReentrantReadWriteLock(false);
-        this.saveOff = !autoSave;        
-        
+        this.saveOff = !autoSave;
+        performConversion();
+        reload();
+    }
+
+    private void performConversion() {
         userConfig.load();
-        
-        for(String user : this.getEntries()) {
+
+        boolean converting = false;
+
+        for (String user : this.getEntries()) {
             ConfigurationNode node = userConfig.getNode("users." + user);
-            
-            if(node.getProperty("groups") == null) {
-                System.out.println("[Permissions] Converting GM/2.x syntax files...");
+
+            if (node.getProperty("groups") == null) {
+                if (!converting) {
+                    System.out.println("[Permissions] Converting GM/2.x syntax files...");
+                    converting = true;
+                }
                 LinkedHashSet<String> groups = new LinkedHashSet<String>();
-                
+
                 String mainGroup = node.getString("group");
-                if(mainGroup != null)
+                if (mainGroup != null)
                     groups.add(mainGroup);
-                
+
                 List<String> subgroups = node.getStringList("subgroups", null);
-                for(String subgroup : subgroups) {
-                    if(subgroup != null && !subgroup.isEmpty())
+                for (String subgroup : subgroups) {
+                    if (subgroup != null && !subgroup.isEmpty())
                         groups.add(subgroup);
                 }
-                
+
                 node.removeProperty("group");
                 node.removeProperty("subgroups");
-                
+
                 node.setProperty("groups", new LinkedList<String>(groups));
 
                 LinkedHashSet<String> perms = new LinkedHashSet<String>();
                 List<String> oldperms = node.getStringList("permissions", null);
-                for(String oldperm : oldperms) {
-                    if(oldperm != null && !oldperm.isEmpty()) {
+                for (String oldperm : oldperms) {
+                    if (oldperm != null && !oldperm.isEmpty()) {
                         perms.add(oldperm.startsWith("+") ? oldperm.substring(1) : oldperm);
                     }
                 }
                 node.setProperty("permissions", new LinkedList<String>(perms));
-                System.out.println("[Permissions] Conversion complete!");
-            }
+
+            } else
+                break;
         }
-        
+
+        if (converting) {
+            System.out.println("[Permissions] Conversion complete!");
+        }
+
         userConfig.save();
-        reload();
     }
 
     @Override

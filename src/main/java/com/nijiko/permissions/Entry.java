@@ -65,14 +65,23 @@ public abstract class Entry {
     }
 
     public void clearTransientPerms() {
+        Set<String> cloned = new HashSet<String>(transientPerms);
         transientPerms.clear();
+        for(String node : cloned)
+            controller.cache.updatePerms(this, node);
     }
 
     public Long addTimedPermission(String node, long duration) {
+        if (node == null)
+            throw new NullPointerException("Supplied node is null");
+        controller.cache.updatePerms(this, node);
         return timedPerms.put(node, duration);
     }
 
     public Long removeTimedPermission(String node) {
+        if (node == null)
+            throw new NullPointerException("Supplied node is null");
+        controller.cache.updatePerms(this, node);
         return timedPerms.remove(node);
     }
 
@@ -81,7 +90,10 @@ public abstract class Entry {
     }
 
     public void clearTimedPerms() {
+        Set<String> cloned = new HashSet<String>(timedPerms.keySet());
         timedPerms.clear();
+        for(String node : cloned)
+            controller.cache.updatePerms(this, node);
     }
 
     void tick(long interval) {
@@ -91,6 +103,7 @@ public abstract class Entry {
             Map.Entry<String, Long> entry = iter.next();
             Long left = entry.getValue();
             if (left == null) {
+                controller.cache.updatePerms(this, entry.getKey());
                 iter.remove();
                 continue;
             }
@@ -98,6 +111,7 @@ public abstract class Entry {
                 continue;
             long newLeft = left - interval;
             if (newLeft <= 0) {
+                controller.cache.updatePerms(this, entry.getKey());
                 iter.remove();
                 continue;
             }
@@ -293,7 +307,6 @@ public abstract class Entry {
         if (chain.contains(this))
             chain.remove(this);
         resolvePerms(perms, this.getPermissions());
-        resolvePerms(perms, transientPerms);
         return perms;
     }
 

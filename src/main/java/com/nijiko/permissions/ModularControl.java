@@ -309,7 +309,7 @@ public class ModularControl extends PermissionHandler {
     // Prefix, suffix, build methods
     @Override
     public String getGroupProperName(String world, String group) {
-        Group g = getGrp(world, group);
+        Group g = getGroupObject(world, group);
         if (g == null) {
             g = getDefaultGroup(world);
             if (g == null)
@@ -365,7 +365,7 @@ public class ModularControl extends PermissionHandler {
     @Override
     public String getGroupRawPrefix(String world, String group) {
         world = getParentWorldGroup(world);
-        Group g = this.getGrp(world, group);
+        Group g = this.getGroupObject(world, group);
         if (g == null)
             return "";
         String prefix = g.getRawString("prefix");
@@ -375,7 +375,7 @@ public class ModularControl extends PermissionHandler {
     @Override
     public String getGroupRawSuffix(String world, String group) {
         world = getParentWorldGroup(world);
-        Group g = this.getGrp(world, group);
+        Group g = this.getGroupObject(world, group);
         if (g == null)
             return "";
         String suffix = g.getRawString("suffix");
@@ -385,7 +385,7 @@ public class ModularControl extends PermissionHandler {
     @Override
     public boolean canGroupRawBuild(String world, String group) {
         world = getParentWorldGroup(world);
-        Group g = this.getGrp(world, group);
+        Group g = this.getGroupObject(world, group);
         if (g == null)
             return false;
         return g.canBuild();

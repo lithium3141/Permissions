@@ -19,17 +19,34 @@ public class User extends Entry {
             System.out.println("Creating user " + name);
             data.create(name);
         }
-        if (this.getRawParents().isEmpty()) {
+
+        if (this.addDefault()) {
             Group g = worldObj.getDefaultGroup();
             if (g != null) {
-                this.addParent(g);
                 if (this.world.equals("*")) {
                     Group qDef = controller.getGrp("?", g.name);
                     if (qDef != null)
                         this.addParent(qDef);
-                }
+                } else
+                    this.addParent(g);
             }
         }
+
+    }
+
+    private boolean addDefault() {
+        if (this.getRawParents().isEmpty())
+            return false;
+        User u = this.controller.getUserObject("*", name);
+        if (u == null)
+            return false;
+
+        LinkedHashSet<GroupWorld> gwSet = u.getRawParents();
+        for (GroupWorld gw : gwSet) {
+            if (gw.getWorld().equals("?"))
+                return false;
+        }
+        return true;
     }
 
     @Override
@@ -55,10 +72,11 @@ public class User extends Entry {
 
             } else if (e instanceof User) {
                 User p = (User) e;
-                if (p.getWorld().equals("*") && !getWorld().equals("*")) { // Prevent infinite loops
-                    LinkedHashSet<Entry> grandparents = p.getParents();
+                if (p.getWorld().equals("*") && !world.equals("*")) { // Prevent infinite loops
+                    LinkedHashSet<Entry> grandparents = p.getParents(world);
                     if (grandparents != null && !grandparents.isEmpty()) {
-                        for (Entry pe : parents) {
+                        for (Entry pe : grandparents) {
+                            // System.out.println(pe);
                             if (pe instanceof Group) // One level of unrolled recursion only
                                 return (Group) pe;
                         }
@@ -86,7 +104,7 @@ public class User extends Entry {
         GroupWorld groupW = g.toGroupWorld();
         for (ListIterator<GroupWorld> iter = trackGroups.listIterator(trackGroups.size()); iter.hasPrevious();) {
             GroupWorld gw = iter.previous();
-//            System.out.println(gw);
+            // System.out.println(gw);
             if (gw.equals(groupW)) {
                 this.removeParent(g);
                 if (iter.hasPrevious()) {
