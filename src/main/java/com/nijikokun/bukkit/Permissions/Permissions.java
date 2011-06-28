@@ -51,7 +51,7 @@ public class Permissions extends JavaPlugin {
     // private Configuration storageConfig;
     @Deprecated
     public static final String name = "Permissions";
-    public static final String version = "3.1.6";
+    public static final String version = "3.1.7";
     public static final String codename = "Yeti";
 
     public Listener buildListener = new Listener(this);
@@ -421,10 +421,15 @@ public class Permissions extends JavaPlugin {
                 msg.send("&4[Permissions] User/Group does not exist.");
 
                 if (autoComplete) {
-                    Set<String> matches = getNames(isGroup ? getHandler().getGroups(world) : getHandler().getUsers(world));
-                    Player[] online = getServer().getOnlinePlayers();
-                    for (Player p : online) {
-                        matches.add(p.getName());
+                    Set<String> matches = null;
+                    if(!isGroup) {
+                        matches = getNames(getHandler().getUsers(world));
+                        Player[] online = getServer().getOnlinePlayers();
+                        for (Player p : online) {
+                            matches.add(p.getName());
+                        }
+                    } else {
+                        matches = getNames(getHandler().getGroups(world));
                     }
                     String closest = getClosest(name, matches, dist);
 

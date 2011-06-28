@@ -3,10 +3,10 @@ package com.nijiko.permissions;
 import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
+//import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -28,7 +28,7 @@ public abstract class Entry {
     protected PermissionWorld worldObj;
     protected String name;
     protected String world;
-    protected Map<String, Map<String, CheckResult>> cache = new HashMap<String, Map<String, CheckResult>>();
+    protected Map<String, CheckResult> cache = new ConcurrentHashMap<String, CheckResult>();
     protected Set<String> transientPerms = new HashSet<String>();
     private final ConcurrentMap<String, Long> timedPerms = new ConcurrentHashMap<String, Long>();
 
@@ -39,8 +39,15 @@ public abstract class Entry {
         this.worldObj = worldObj;
     }
 
+    public void clearCache() {
+        for(Iterator<CheckResult> iter = cache.values().iterator();iter.hasNext();) {
+            iter.next().invalidate();
+            iter.remove();
+        }
+    }
+
     public boolean delete() {
-        cache.clear();
+        clearCache();
         transientPerms.clear();
         timedPerms.clear();
         Storage store = getStorage();
@@ -53,35 +60,35 @@ public abstract class Entry {
     public void addTransientPermission(String node) {
         if (node == null)
             return;
-        controller.cache.updatePerms(this, node);
+        clearCacheNode(node);
         transientPerms.add(node);
     }
 
     public void removeTransientPermission(String node) {
         if (node == null)
             return;
-        controller.cache.updatePerms(this, node);
+        clearCacheNode(node);
         transientPerms.remove(node);
     }
 
     public void clearTransientPerms() {
         Set<String> cloned = new HashSet<String>(transientPerms);
         transientPerms.clear();
-        for(String node : cloned)
-            controller.cache.updatePerms(this, node);
+        for (String node : cloned)
+            clearCacheNode(node);
     }
 
     public Long addTimedPermission(String node, long duration) {
         if (node == null)
             throw new NullPointerException("Supplied node is null");
-        controller.cache.updatePerms(this, node);
+        clearCacheNode(node);
         return timedPerms.put(node, duration);
     }
 
     public Long removeTimedPermission(String node) {
         if (node == null)
             throw new NullPointerException("Supplied node is null");
-        controller.cache.updatePerms(this, node);
+        clearCacheNode(node);
         return timedPerms.remove(node);
     }
 
@@ -92,8 +99,8 @@ public abstract class Entry {
     public void clearTimedPerms() {
         Set<String> cloned = new HashSet<String>(timedPerms.keySet());
         timedPerms.clear();
-        for(String node : cloned)
-            controller.cache.updatePerms(this, node);
+        for (String node : cloned)
+            clearCacheNode(node);
     }
 
     void tick(long interval) {
@@ -103,7 +110,7 @@ public abstract class Entry {
             Map.Entry<String, Long> entry = iter.next();
             Long left = entry.getValue();
             if (left == null) {
-                controller.cache.updatePerms(this, entry.getKey());
+                clearCacheNode(entry.getKey());
                 iter.remove();
                 continue;
             }
@@ -111,7 +118,7 @@ public abstract class Entry {
                 continue;
             long newLeft = left - interval;
             if (newLeft <= 0) {
-                controller.cache.updatePerms(this, entry.getKey());
+                clearCacheNode(entry.getKey());
                 iter.remove();
                 continue;
             }
@@ -130,8 +137,8 @@ public abstract class Entry {
         return new HashSet<String>(timedPerms.keySet());
     }
 
-    public Map<String, Map<String, CheckResult>> getCache() {
-        return Collections.unmodifiableMap(cache);
+    public Map<String, CheckResult> getCache() {
+        return cache;
     }
 
     protected abstract Storage getStorage();
@@ -149,7 +156,7 @@ public abstract class Entry {
     public LinkedHashSet<GroupWorld> getRawParents() {
         Storage store = getStorage();
         if (store != null)
-        return store.getParents(name);
+            return store.getParents(name);
         return null;
     }
 
@@ -161,40 +168,46 @@ public abstract class Entry {
     }
 
     public void addPermission(final String permission) {
-        controller.cache.updatePerms(this, permission);
+        clearCacheNode(permission);
         Storage store = getStorage();
         if (store != null)
             store.addPermission(name, permission);
     }
 
     public void removePermission(final String permission) {
-        controller.cache.updatePerms(this, permission);
-
+        clearCacheNode(permission);
         Storage store = getStorage();
         if (store != null)
             store.removePermission(name, permission);
     }
 
     public void addParent(Group group) {
-        controller.cache.updateParent(this, group);
-
+        clearCache();
         Storage store = getStorage();
         if (store != null)
             store.addParent(name, group.world, group.name);
     }
 
     public void removeParent(Group group) {
-        controller.cache.updateParent(this, group);
-
+        clearCache();
         Storage store = getStorage();
         if (store != null)
             store.removeParent(name, group.world, group.name);
     }
 
     public boolean hasPermission(String permission) {
+        if (permission == null)
+            return true;
         CheckResult cr = has(permission, relevantPerms(permission), new LinkedHashSet<Entry>(), world);
-        // System.out.println(cr);
         return cr.getResult();
+    }
+    
+    private void clearCacheNode(String node) {
+        if(node == null)
+            return;
+        CheckResult cr = cache.remove(node);
+        if(cr != null)
+            cr.invalidate();
     }
 
     protected CheckResult has(String node, LinkedHashSet<String> relevant, LinkedHashSet<Entry> checked, String world) {
@@ -203,22 +216,20 @@ public abstract class Entry {
             return null;
         checked.add(this);
 
-        CheckResult cr = null;
-        if (cache.get(world) != null) {
-            cache.put(world, new HashMap<String, CheckResult>());
-            cr = cache.get(world).get(node);
-            if (cr == null || !cr.isValid()) {
-                cache.remove(node);
-                cr = null;
-            }
+        CheckResult cr = cache.get(node);
+        if (cr != null && (!world.equals(cr.getWorld()) || !cr.isValid())) {
+            cr = null;
         }
+
+        boolean skipCache = false;
 
         if (cr == null) {
             // Check own permissions
             Set<String> perms = this.getPermissions();
             for (String mrn : relevant) {
                 if (perms.contains(mrn)) {
-                    cr = new CheckResult(this, mrn, this, node, world);
+                    skipCache = timedPerms.containsKey(mrn);
+                    cr = new CheckResult(this, mrn, this, node, world, skipCache);
                     break;
                 }
             }
@@ -237,7 +248,7 @@ public abstract class Entry {
 
                 if (cr == null) {
                     // No relevant permissions
-                    cr = new CheckResult(this, null, this, node, world);
+                    cr = new CheckResult(this, null, this, node, world, false);
                 }
             }
             cache(cr);
@@ -248,12 +259,9 @@ public abstract class Entry {
     }
 
     protected void cache(CheckResult cr) {
-        if (cr == null)
+        if (cr == null || cr.getNode() == null || cr.shouldSkipCache() || !cr.isValid())
             return;
-        if (cache.get(world) == null)
-            cache.put(world, new HashMap<String, CheckResult>());
-        controller.cache.cacheResult(cr);
-        this.cache.get(world).put(cr.getNode(), cr);
+        cache.put(cr.getNode(), cr);
     }
 
     public boolean isChildOf(final Entry entry) {

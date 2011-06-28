@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+//import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,9 +32,10 @@ public class ModularControl extends PermissionHandler {
     private String defaultWorld = "";
 
     private Map<String, PermissionWorld> worlds = new HashMap<String, PermissionWorld>(1, 1.5f);
-    
+
     public static final long tickInterval = 10L;
-    PermissionCache cache = new PermissionCache();
+
+    // PermissionCache cache = new PermissionCache();
 
     class RefreshTask implements Runnable {
         @Override
@@ -73,7 +75,6 @@ public class ModularControl extends PermissionHandler {
 
     @Override
     public boolean reload(String world) {
-        cache.reloadWorld(world);
         PermissionWorld w = this.getWorldObject(world);
         if (w == null)
             return false;
@@ -89,16 +90,22 @@ public class ModularControl extends PermissionHandler {
         return false;
     }
 
+    public void clearAllCaches() {
+        for (PermissionWorld w : worlds.values()) {
+            w.clearCaches();
+        }
+    }
+
     @Override
     public void forceLoadWorld(String world) throws Exception {
         boolean q = world.equals("?");
         UserStorage userStore = q ? new NullUserStorage(world) : StorageFactory.getUserStorage(world, storageConfig);
-        GroupStorage groupStore = q ? new NullGroupStorage(world) :  StorageFactory.getGroupStorage(world, storageConfig);
+        GroupStorage groupStore = q ? new NullGroupStorage(world) : StorageFactory.getGroupStorage(world, storageConfig);
         PermissionWorld w = new PermissionWorld(world, this, userStore, groupStore);
         w.reload();
-//        System.out.println("Loaded world " + world);
+        // System.out.println("Loaded world " + world);
         worlds.put(world, w);
-//        System.out.println(worlds);
+        // System.out.println(worlds);
     }
 
     @Override
@@ -118,7 +125,6 @@ public class ModularControl extends PermissionHandler {
 
     private void storageReload() {
         saveAll();
-        cache.flushAll();
         for (PermissionWorld w : worlds.values())
             w.minorReload();
 
@@ -132,17 +138,16 @@ public class ModularControl extends PermissionHandler {
             w.reload();
         }
     }
-    
+
     private void tick() {
-//        System.out.println("[Permissions] Ticking");
-        for(PermissionWorld w: worlds.values()) {
+        // System.out.println("[Permissions] Ticking");
+        for (PermissionWorld w : worlds.values()) {
             w.tick(tickInterval);
         }
     }
 
     @Override
     public void closeAll() {
-        cache.flushAll();
         this.saveAll();
         Permissions.instance.getServer().getPluginManager().callEvent(new ControlCloseEvent());
     }
@@ -396,7 +401,7 @@ public class ModularControl extends PermissionHandler {
         if (overrideWorld == null)
             overrideWorld = defaultWorld;
         LinkedHashSet<Group> groupSet = new LinkedHashSet<Group>();
-        if(raws == null)
+        if (raws == null)
             return groupSet;
         for (GroupWorld raw : raws) {
             String rawWorld = raw.getWorld();
@@ -442,13 +447,11 @@ public class ModularControl extends PermissionHandler {
 
     @Override
     public Group safeGetGroup(String world, String name) throws Exception {
-        if (!world.equals("?")) {
-            world = getParentWorldGroup(world);
-            try {
-                loadWorld(world);
-            } catch (Exception e) {
-                throw new Exception("Error creating group " + name + " in world " + world + " due to storage problems!", e);
-            }
+        world = getParentWorldGroup(world);
+        try {
+            loadWorld(world);
+        } catch (Exception e) {
+            throw new Exception("Error creating group " + name + " in world " + world + " due to storage problems!", e);
         }
         PermissionWorld w = this.getWorldObject(world);
         if (w == null) {

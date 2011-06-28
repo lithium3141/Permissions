@@ -79,10 +79,23 @@ public class PermissionWorld {
         if (groupStore != null)
             groupStore.reload();
         
-        for(User u : users.values())
+        for(User u : users.values()) {
             u.clearTransientPerms();
-        for(Group g : groups.values())
+            u.clearCache();
+        }
+        for(Group g : groups.values()) {
             g.clearTransientPerms();
+            g.clearCache();
+        }
+    }
+    
+    public void clearCaches() {        
+        for(User u : users.values()) {
+            u.clearCache();
+        }
+        for(Group g : groups.values()) {
+            g.clearCache();
+        }        
     }
     
     public void save() {
@@ -175,5 +188,10 @@ public class PermissionWorld {
     void tick(long interval) {
         for(User u : users.values())
             u.tick(interval);
+    }
+    
+    @Override
+    public String toString() {
+        return "PermissionWorld " + world;
     }
 }
