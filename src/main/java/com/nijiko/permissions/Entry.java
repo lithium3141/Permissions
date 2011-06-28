@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
 //import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -22,6 +23,10 @@ import com.nijiko.data.GroupWorld;
 import com.nijiko.data.Storage;
 
 //TODO: Cleanup and docs
+/**
+ * This abstract class represents a user or a group.
+ * It provides general functions are shared by both groups and users.
+ */
 public abstract class Entry {
 
     protected ModularControl controller;
@@ -32,20 +37,36 @@ public abstract class Entry {
     protected Set<String> transientPerms = new HashSet<String>();
     private final ConcurrentMap<String, Long> timedPerms = new ConcurrentHashMap<String, Long>();
 
-    Entry(ModularControl controller, String name, PermissionWorld worldObj) {
+    protected Entry(ModularControl controller, String name, PermissionWorld worldObj) {
         this.controller = controller;
         this.name = name;
         this.world = worldObj.getWorldName();
         this.worldObj = worldObj;
     }
 
+    /**
+     * Clears the cache of this entry.
+     */
     public void clearCache() {
         for(Iterator<CheckResult> iter = cache.values().iterator();iter.hasNext();) {
             iter.next().invalidate();
             iter.remove();
         }
     }
+    
+    /**
+     * Method called if a parent is added/removed.
+     * Impl note: Currently Clears ALL caches. 
+     * TODO: Is checking all entry if they are affected more effecient than clearing all caches? 
+     */
+    private void groupClearCache() {
+        controller.clearAllCaches();
+    }
 
+    /**
+     * Attempts to delete this entry.
+     * @return Whether the deletion was successful.
+     */
     public boolean delete() {
         clearCache();
         transientPerms.clear();
@@ -57,20 +78,31 @@ public abstract class Entry {
             return false;
     }
 
+    /**
+     * Adds a transient permission, which will last to the next minor reload.
+     * @param node Transient permission node to add
+     */
     public void addTransientPermission(String node) {
         if (node == null)
             return;
-        clearCacheNode(node);
         transientPerms.add(node);
+        clearCacheNode(node);
     }
 
+    /**
+     * Removes a transient permission.
+     * @param node Transient permission node to remove
+     */
     public void removeTransientPermission(String node) {
         if (node == null)
             return;
-        clearCacheNode(node);
         transientPerms.remove(node);
+        clearCacheNode(node);
     }
 
+    /**
+     * Clears all transient permissions.
+     */
     public void clearTransientPerms() {
         Set<String> cloned = new HashSet<String>(transientPerms);
         transientPerms.clear();
@@ -78,13 +110,23 @@ public abstract class Entry {
             clearCacheNode(node);
     }
 
+    /**
+     * Adds a timed permission. The duration is measured in server ticks.
+     * @param node Timed permission node to add
+     * @param duration Duration in server ticks
+     * @return Previous duration for the timed permission node if it was added before, if any, or null otherwise.
+     */
     public Long addTimedPermission(String node, long duration) {
         if (node == null)
             throw new NullPointerException("Supplied node is null");
         clearCacheNode(node);
         return timedPerms.put(node, duration);
     }
-
+    /**
+     * Removes a timed permission.
+     * @param node Timed permission node to add
+     * @return Previous duration for the timed permission node, if any, or null otherwise.
+     */
     public Long removeTimedPermission(String node) {
         if (node == null)
             throw new NullPointerException("Supplied node is null");
@@ -92,10 +134,18 @@ public abstract class Entry {
         return timedPerms.remove(node);
     }
 
+    /**
+     * Get the remaining duration for a timed permission node
+     * @param node Timed permission node to check
+     * @return Previous duration for the timed permission node, if any, or null otherwise.
+     */
     public Long getDuration(String node) {
         return timedPerms.get(node);
     }
 
+    /**
+     * Clears all timed permissions.
+     */
     public void clearTimedPerms() {
         Set<String> cloned = new HashSet<String>(timedPerms.keySet());
         timedPerms.clear();
@@ -103,6 +153,10 @@ public abstract class Entry {
             clearCacheNode(node);
     }
 
+    /**
+     * Interval function used by ticker task. This periodically updates the duration.
+     * @param interval Interval in server ticks
+     */
     void tick(long interval) {
         if (interval <= 0)
             return;
@@ -126,23 +180,44 @@ public abstract class Entry {
         }
     }
 
-    // Used by PermissionWorld to copy timed perms to the new entry object
+    /**
+     * Used by PermissionWorld to copy timed perms to the new entry object
+     * @param e Old entry from previous load. Must have the same world and name as this instance.
+     */
     void copyTimedMap(Entry e) {
         if (!this.equals(e))
             return;
         timedPerms.putAll(e.timedPerms);
     }
 
+    /**
+     * Returns a set containing all current timed permissions. This set will not reflect changes made after creation.
+     * @return Set containing all current timed permissions.
+     */
     protected Set<String> getTimedPermissions() {
         return new HashSet<String>(timedPerms.keySet());
     }
 
+    /**
+     * Returns an unmodifiable view of the cache.
+     * @return
+     */
     public Map<String, CheckResult> getCache() {
-        return cache;
+        return Collections.unmodifiableMap(cache);
     }
 
+    /**
+     * Abstract method implemented by subclasses to return the storage instance.
+     * This method needs to be implemented so as to allow many methods in this class to work.
+     * @return Storage instance used by subclasses
+     */
     protected abstract Storage getStorage();
 
+    /**
+     * Returns a set containing the permissions of this entry, including timed and transient permissions.
+     * This set will not reflect any modifications made after its creation.
+     * @return Set containing this entry's permissions.
+     */
     public Set<String> getPermissions() {
         Set<String> perms = new HashSet<String>();
         Storage store = getStorage();
@@ -153,6 +228,10 @@ public abstract class Entry {
         return perms;
     }
 
+    /**
+     * Returns a set containing world name-group name pairs that represent this entry's parents
+     * @return Set containing this entry's parents in world name-group name pair form.
+     */
     public LinkedHashSet<GroupWorld> getRawParents() {
         Storage store = getStorage();
         if (store != null)
@@ -160,6 +239,11 @@ public abstract class Entry {
         return null;
     }
 
+    /**
+     * Add/removes a node. Its behaviour depends on the <tt>add</tt> parameter.
+     * @param permission Node to add/remove
+     * @param add True if node is to be added, false if it is to be removed
+     */
     public void setPermission(final String permission, final boolean add) {
         if (add)
             addPermission(permission);
@@ -167,6 +251,10 @@ public abstract class Entry {
             removePermission(permission);
     }
 
+    /**
+     * Adds a permission to this entry.
+     * @param permission Permission to add
+     */
     public void addPermission(final String permission) {
         clearCacheNode(permission);
         Storage store = getStorage();
@@ -174,6 +262,10 @@ public abstract class Entry {
             store.addPermission(name, permission);
     }
 
+    /**
+     * Removes a permission from this entry.
+     * @param permission Permission to remove
+     */
     public void removePermission(final String permission) {
         clearCacheNode(permission);
         Storage store = getStorage();
@@ -181,20 +273,33 @@ public abstract class Entry {
             store.removePermission(name, permission);
     }
 
+    /**
+     * Adds a group to this entry's parent list.
+     * @param group Group to add
+     */
     public void addParent(Group group) {
-        clearCache();
+        groupClearCache();
         Storage store = getStorage();
         if (store != null)
             store.addParent(name, group.world, group.name);
     }
 
+    /**
+     * Removes a group from this entry's parent list.
+     * @param group Group to remove
+     */
     public void removeParent(Group group) {
-        clearCache();
+        groupClearCache();
         Storage store = getStorage();
         if (store != null)
             store.removeParent(name, group.world, group.name);
     }
 
+    /**
+     * Checks this entry and its ancestors for the specified permission
+     * @param permission Node to check for
+     * @return Whether this entry has that permission
+     */
     public boolean hasPermission(String permission) {
         if (permission == null)
             return true;
@@ -202,6 +307,10 @@ public abstract class Entry {
         return cr.getResult();
     }
     
+    /**
+     * This method is called to update the cache when a node is added/removed.
+     * @param node
+     */
     private void clearCacheNode(String node) {
         if(node == null)
             return;
@@ -209,7 +318,30 @@ public abstract class Entry {
         if(cr != null)
             cr.invalidate();
     }
+    
+    /**
+     * Checks this entry and its ancestors for the specified permission, 
+     * and returns a CheckResult object containing more info about the result than hasPermission() provides.
+     * @see CheckResult
+     * @param node Node to check for
+     * @return Results of the check
+     */
+    public CheckResult has(String node) {
+        if (node == null)
+            return null;
+        return has(node, relevantPerms(node), new LinkedHashSet<Entry>(), world);        
+    }
 
+    /**
+     * Permission checking algorithm. 
+     * Impl notes: Currently, this uses a DFS. Also, an entry can inherit from a parent multiple times,
+     * as long as the "path" taken to reach that parent is different. 
+     * @param node Node to check for
+     * @param relevant Precomputed set containing relevant nodes
+     * @param checked Set containing the inheritance "path" taken to reach this entry
+     * @param world Specialising world
+     * @return Result of check
+     */
     protected CheckResult has(String node, LinkedHashSet<String> relevant, LinkedHashSet<Entry> checked, String world) {
 
         if (checked.contains(this))
@@ -240,7 +372,7 @@ public abstract class Entry {
                     CheckResult parentCr = e.has(node, relevant, checked, world);
                     if (parentCr == null)
                         continue;
-                    if (parentCr.getMostRelevantNode() != null) {
+                    if (parentCr.getRelevantNode() != null) {
                         cr = parentCr.setChecked(this);
                         break;
                     }
@@ -258,12 +390,21 @@ public abstract class Entry {
         return cr;
     }
 
+    /**
+     * Caches a CheckResult.
+     * @param cr CheckResult to cache.
+     */
     protected void cache(CheckResult cr) {
         if (cr == null || cr.getNode() == null || cr.shouldSkipCache() || !cr.isValid())
             return;
         cache.put(cr.getNode(), cr);
     }
 
+    /**
+     * Checks whether this entry inherits from the given entry.
+     * @param entry Possible parent entry
+     * @return True if this entry inherits from the given entry, false otherwise.
+     */
     public boolean isChildOf(final Entry entry) {
         if (entry == null)
             return false;
@@ -278,6 +419,11 @@ public abstract class Entry {
         return val == null ? false : val;
     }
 
+    /**
+     * Checks whether this entry inherits from a group that matches the given worldname-groupname pair.
+     * @return True if this entry has a parent group that matches that pair, false otherwise.
+     * @return
+     */
     boolean isChildOf(final GroupWorld gw) {
         Boolean val = recursiveCheck(new EntryVisitor<Boolean>() {
             @Override
@@ -290,10 +436,21 @@ public abstract class Entry {
         return val == null ? false : val;
     }
 
+    /**
+     * Returns a set containing all permissions, including inherited ones.
+     * @return
+     */
     public Set<String> getAllPermissions() {
         return getAllPermissions(new LinkedHashSet<Entry>(), world);
     }
 
+    /**
+     * This method combines the permissions inherited from parents
+     * and this entry's own permissions and returns the result.
+     * @param chain Set containing the inheritance "path" taken to reach this entry
+     * @param world Specialising world
+     * @return
+     */
     protected Set<String> getAllPermissions(LinkedHashSet<Entry> chain, String world) {
         Set<String> perms = new HashSet<String>();
         if (chain == null)
@@ -310,7 +467,7 @@ public abstract class Entry {
         rawParents = null;
 
         for (Entry e : parents) {
-            perms = resolvePerms(perms, e.getAllPermissions(chain, world));
+            resolvePerms(perms, e.getAllPermissions(chain, world));
         }
         if (chain.contains(this))
             chain.remove(this);
@@ -318,7 +475,13 @@ public abstract class Entry {
         return perms;
     }
 
-    protected static Set<String> resolvePerms(Set<String> perms, Set<String> rawPerms) {
+    /**
+     * Computes the combination of <tt>perms</tt> and <tt>rawPerms</tt>,
+     * with nodes in <tt>rawPerms</tt> overriding nodes in <tt>perms</tt>.
+     * @param perms Overridable set of permissions
+     * @param rawPerms New permissions to add
+     */
+    protected static void resolvePerms(Set<String> perms, Set<String> rawPerms) {
         for (Iterator<String> rawIter = rawPerms.iterator(); rawIter.hasNext();) {
             String perm = rawIter.next();
             if (perm.isEmpty()) {
@@ -337,17 +500,31 @@ public abstract class Entry {
             }
         }
         perms.addAll(rawPerms);
-        return perms;
+        return;
     }
 
+    /**
+     * Gets the parents of this entry, specialising all ?-world groups into groups with the same world as this entry.
+     * Note that users may inherit from users via world inheritance and/or global permissions.
+     * @return Set containing parent entries.
+     */
     public LinkedHashSet<Entry> getParents() {
         return getParents(world);
     }
 
+    /**
+     * Identical to getParents() but without specialising ?-world groups.
+     * @return Set containing parent entries.
+     */
     protected LinkedHashSet<Entry> getUnspecialisedParents() {
         return getParents(null);
     }
 
+    /**
+     * Gets the parents of this entry, specialising all ?-world groups into groups with the provided world.
+     * Note that users may inherit from users via world inheritance and/or global permissions.
+     * @return Set containing parent entries.
+     */
     public LinkedHashSet<Entry> getParents(String world) {
         LinkedHashSet<Group> groupParents = controller.stringToGroups(getRawParents(), world);
         LinkedHashSet<Entry> parents = new LinkedHashSet<Entry>();
@@ -366,11 +543,19 @@ public abstract class Entry {
         return parents;
     }
 
+    /**
+     * Returns the weight of this entry.
+     * @return Weight of this entry.
+     */
     public int getWeight() {
         Integer value = getInt("weight");
         return value == null ? -1 : value;
     }
 
+    /**
+     * Gets the ancestors of this entry, including parents, parents of parents and etc.
+     * @return Set of this entry's ancestors.
+     */
     public LinkedHashSet<Entry> getAncestors() {
         LinkedHashSet<Entry> parentSet = new LinkedHashSet<Entry>();
         Queue<Entry> queue = new ArrayDeque<Entry>();
@@ -393,6 +578,10 @@ public abstract class Entry {
         return parentSet;
     }
 
+    /**
+     * Checks whether a group matches a worldname-groupname pair.
+     * @author rcjrrjcr
+     */
     static class GroupChecker implements EntryVisitor<Boolean> {
         protected final String world;
         protected final String group;
@@ -413,6 +602,12 @@ public abstract class Entry {
         }
     }
 
+    /**
+     * Checks if the user inherits from the group specified by the parameters
+     * @param world World of group
+     * @param group Name of group
+     * @return True if user inherits from that group (directly or indirectly), false otherwise
+     */
     public boolean inGroup(String world, String group) {
         if (this.getType() == EntryType.GROUP && this.world.equalsIgnoreCase(world) && this.name.equalsIgnoreCase(group))
             return true;
@@ -421,11 +616,26 @@ public abstract class Entry {
         return val == null ? false : val;
     }
 
+    /**
+     * Checks if entry can build.
+     * @return Whether entry can build.
+     */
     public boolean canBuild() {
         Boolean value = this.recursiveCheck(new BooleanInfoVisitor("build"));
         return value == null ? false : value;
     }
 
+    /**
+     * This method traverses the inheritance tree (postorder traversal),
+     * and for every entry in the inheritance tree, the visitor's <tt>value()</tt> method is called.
+     * The visitor should return a non-null value to halt traversal, and a null value to continue to the next entry.
+     * When traversal is halted abruptly, the non-null value returned by the visitor will be returned by this method.
+     * When traversal completes without the visitor returning a non-null value, null will be returned.
+     * @param <T> Return value of visitor
+     * @param visitor Visitor object
+     * @return Visitor's first non-null return value, or null if
+     * traversal completes without any non-null values returned by the visitor.
+     */
     public <T> T recursiveCheck(EntryVisitor<T> visitor) {
         return recursiveCheck(new LinkedHashSet<Entry>(), visitor, world);
     }
@@ -456,6 +666,15 @@ public abstract class Entry {
         return null;
     }
 
+    /**
+     * This method is similar to recursiveCheck, but this instead returns the 
+     * largest value (according to the comparator) returned by the visitor.
+     * If a non-null value is returned for an entry, that entry's parents will not be visited.
+     * @param <T> Return type
+     * @param visitor Visitor object
+     * @param comparator Comparator used to compare visitor return values
+     * @return Largest value found by a visitor.
+     */
     public <T> T recursiveCompare(EntryVisitor<T> visitor, Comparator<T> comparator) {
         return recursiveCompare(new LinkedHashSet<Entry>(), visitor, comparator, world);
     }
@@ -489,8 +708,16 @@ public abstract class Entry {
         return currentValue;
     }
 
+    /**
+     * Abstract function implemented by subclasses to return the type of entry it represents.
+     * @return Type of entry (user, group)
+     */
     public abstract EntryType getType();
 
+    /**
+     * Returns the name of this entry.
+     * @return Name
+     */
     public String getName() {
         return name;
     }
