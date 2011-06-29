@@ -1,13 +1,16 @@
 package com.nijiko.test;
 
-import static org.junit.Assert.*;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import junit.framework.Assert;
 
 import org.bukkit.Server;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.nijiko.MessageHelper;
@@ -32,6 +35,14 @@ public class MessageHelperTest {
 		add("pink");
 		add("yellow");
 		add("white");
+	}};
+	
+	@SuppressWarnings("serial")
+	private Map<String, String> testStrings = new HashMap<String, String>() {{
+		put("There are no replacements in this string.", "There are no replacements in this string.");
+		put("This string is <blue>half blue.", "This string is \u00A79half blue.");
+		put("This string is &4half red.", "This string is \u00A74half red.");
+		put("This string <teal>is a &5rainbow!", "This string \u00A73is a \u00A75rainbow!");
 	}};
 	
 	protected class MockCommandSender implements org.bukkit.command.CommandSender {
@@ -59,15 +70,31 @@ public class MessageHelperTest {
 		}
 		
 	}
+	
+	protected MessageHelper target;
+	protected MockCommandSender mockSender;
+	
+	@Before
+	public void setUp() {
+		this.mockSender = new MockCommandSender();
+		this.target = new MessageHelper(this.mockSender);
+	}
+	
+	@After
+	public void tearDown() {
+		this.target = null;
+		this.mockSender = null;
+	}
 
 	@Test
-	public void testMessageHelper() {
+	public void testMessageHelperNull() {
 		MessageHelper target = new MessageHelper(null);
 		Assert.assertNull("MessageHelper did not accept null CommandSender", target.sender);
-		
-		MockCommandSender mockSender = new MockCommandSender();
-		target = new MessageHelper(mockSender);
-		Assert.assertEquals("MessageHelper did not store mock CommandSender", mockSender, target.sender);
+	}
+	
+	@Test
+	public void testMessageHelperCommandSender() {
+		Assert.assertEquals("MessageHelper did not store mock CommandSender", this.mockSender, this.target.sender);
 	}
 
 	@Test
@@ -134,12 +161,36 @@ public class MessageHelperTest {
 
 	@Test
 	public void testSendCommandSenderString() {
-		fail("Not yet implemented");
+		// Even though there's one available, create a new sender to ensure the static
+		// method is doing what it's supposed to, not some crazy singleton reflection magic.
+		MockCommandSender sender = new MockCommandSender();
+		
+		int messagesSent = 0;
+		for(Entry<String, String> testEntry : this.testStrings.entrySet()) {
+			String message = testEntry.getKey();
+			String expected = testEntry.getValue();
+			
+			MessageHelper.send(sender, message);
+			messagesSent += 1;
+			
+			Assert.assertEquals("MessageHelper lost track of message", messagesSent, sender.sentMessages.size());
+			Assert.assertEquals("MessageHelper did not parse string properly", expected, sender.sentMessages.get(sender.sentMessages.size() - 1));
+		}
 	}
 
 	@Test
-	public void testSendString() {
-		fail("Not yet implemented");
+	public void testSendStringBasic() {
+		int messagesSent = 0;
+		for(Entry<String, String> testEntry : this.testStrings.entrySet()) {
+			String message = testEntry.getKey();
+			String expected = testEntry.getValue();
+			
+			this.target.send(message);
+			messagesSent += 1;
+			
+			Assert.assertEquals("MessageHelper lost track of message", messagesSent, this.mockSender.sentMessages.size());
+			Assert.assertEquals("MessageHelper did not parse string properly", expected, this.mockSender.sentMessages.get(this.mockSender.sentMessages.size() - 1));
+		}
 	}
 
 }
