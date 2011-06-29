@@ -84,7 +84,7 @@ public class MessageHelper {
      */
     public static String parse(String original) {
         original = colorize(original);
-        return original.replaceAll("(&([a-z0-9]))", "\u00A7$2").replace("&&",
+        return original.replaceAll("(&([a-f0-9]))", "\u00A7$2").replace("&&",
                 "&");
     }
 
@@ -149,7 +149,7 @@ public class MessageHelper {
      * @see MessageHelper#save(CommandSender)
      */
     public void send(String message) {
-        if (sender != null)
-            sender.sendMessage(parse(message));
+        if (this.sender != null)
+        	this.sender.sendMessage(parse(message));
     }
 }
